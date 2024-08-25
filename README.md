@@ -1,1 +1,1 @@
-# react-jwt-authentication
+# mern-authentication
