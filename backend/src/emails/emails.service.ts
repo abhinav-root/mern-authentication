@@ -67,4 +67,10 @@ export class EmailsService {
     const text = `Click on below link to reset your password.\n${resetPasswordLink}`;
     await this.sendEmail(recepientEmail, subject, text);
   }
+
+  async sendPasswordChangedEmail(recepientEmail: string) {
+    const subject = 'Password changed';
+    const text = `Your password has been changed`;
+    await this.sendEmail(recepientEmail, subject, text);
+  }
 }

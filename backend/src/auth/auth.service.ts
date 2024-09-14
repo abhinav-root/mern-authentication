@@ -16,6 +16,7 @@ import { VerifyEmailDto } from './dtos/verify-email.dto';
 import { ConfigService } from '@nestjs/config';
 import { LoginDto } from './dtos/login.dto';
 import { ForgotPasswordDto } from './dtos/forgot-password.dto';
+import { ResetPasswordDto } from './dtos/reset-password.dto';
 
 @Injectable()
 export class AuthService {
@@ -86,8 +87,8 @@ export class AuthService {
     }
 
     user.isVerified = true;
-    user.verificationCode = undefined;
-    user.verificationCodeExpiresAt = undefined;
+    user.verificationCode = null;
+    user.verificationCodeExpiresAt = null;
     await user.save();
 
     await this.emailsService.sendWelcomeEmail(user.email, user.name);
@@ -146,5 +147,27 @@ export class AuthService {
     return {
       message: `A password reset link has been sent to ${forgotPasswordDto.email}`,
     };
+  }
+
+  async resetPassword(resetPasswordDto: ResetPasswordDto) {
+    const user = await this.usersService.findUserByResetPasswordToken(
+      resetPasswordDto.resetPasswordToken,
+    );
+    if (!user || (user.resetPasswordTokenExpiresAt as Date) < new Date()) {
+      throw new BadRequestException(
+        'Password reset link is invalid or has expired.',
+      );
+    }
+
+    const hashedPassword = await this.hashPassword(
+      resetPasswordDto.newPassword,
+    );
+    user.password = hashedPassword;
+    user.resetPasswordToken = null;
+    user.resetPasswordTokenExpiresAt = null;
+    await user.save();
+    await this.emailsService.sendPasswordChangedEmail(user.email);
+
+    return { message: 'Password changed successfully' };
   }
 }

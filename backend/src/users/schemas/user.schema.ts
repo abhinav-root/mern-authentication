@@ -5,32 +5,38 @@ export type UserDocument = HydratedDocument<User>;
 
 @Schema({ timestamps: true })
 export class User {
-  @Prop({ required: true, unique: true, lowercase: true, trim: true })
+  @Prop({
+    type: String,
+    required: true,
+    unique: true,
+    lowercase: true,
+    trim: true,
+  })
   email: string;
 
-  @Prop({ required: true, unique: true })
+  @Prop({ type: String, required: true, unique: true })
   password: string;
 
-  @Prop({ required: true, lowercase: true, trim: true })
+  @Prop({ type: String, required: true, lowercase: true, trim: true })
   name: string;
 
-  @Prop()
-  lastLoginAt: Date;
+  @Prop({ default: null, type: Date })
+  lastLoginAt: Date | null;
 
   @Prop({ default: false })
   isVerified: boolean;
 
-  @Prop()
-  resetPasswordToken?: string;
+  @Prop({ default: null, type: String })
+  resetPasswordToken: string | null;
 
-  @Prop()
-  resetPasswordTokenExpiresAt?: Date;
+  @Prop({ default: null, type: Date })
+  resetPasswordTokenExpiresAt: Date | null;
 
-  @Prop()
-  verificationCode?: string;
+  @Prop({ default: null, type: String })
+  verificationCode: string | null;
 
-  @Prop()
-  verificationCodeExpiresAt?: Date;
+  @Prop({ default: null, type: Date })
+  verificationCodeExpiresAt: Date | null;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
