@@ -2,20 +2,26 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  UnauthorizedException,
 } from '@nestjs/common';
 import * as crypto from 'crypto';
 import * as argon2 from 'argon2';
+import { Response } from 'express';
+import * as jwt from 'jsonwebtoken';
 
 import { SignupDto } from './dtos/signup.dto';
 import { UsersService } from 'src/users/users.service';
 import { EmailsService } from 'src/emails/emails.service';
 import { VerifyEmailDto } from './dtos/verify-email.dto';
+import { ConfigService } from '@nestjs/config';
+import { LoginDto } from './dtos/login.dto';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly emailsService: EmailsService,
+    private readonly configService: ConfigService,
   ) {}
 
   async signup(signupDto: SignupDto) {
@@ -97,5 +103,41 @@ export class AuthService {
     const subject = 'Verify your email';
     const text = `Welcome ${userName}. You have successfully verified your email.`;
     await this.emailsService.sendEmail(recepientEmail, subject, text);
+  }
+
+  generateToken(userId: string) {
+    const secret = this.configService.get<string>('JWT_SECRET');
+    if (!secret) {
+      throw new Error('JWT_SECRET is not defined');
+    }
+    const token = jwt.sign({ userId }, secret, { expiresIn: '1d' });
+    return token;
+  }
+
+  async login(loginDto: LoginDto, response: Response) {
+    const user = await this.usersService.findUserByEmail(loginDto.email);
+    if (!user) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+    const isPasswordCorrect = await this.verifyPassword(
+      user.password,
+      loginDto.password,
+    );
+    if (!isPasswordCorrect) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+    const token = this.generateToken(user.id);
+    response.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 1000 * 60 * 60 * 24,
+    });
+
+    user.lastLoginAt = new Date();
+    await user.save();
+
+    return { message: 'Logged in' };
   }
 }
