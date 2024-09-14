@@ -1,10 +1,15 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+} from '@nestjs/common';
 import * as crypto from 'crypto';
 import * as argon2 from 'argon2';
 
 import { SignupDto } from './dtos/signup.dto';
 import { UsersService } from 'src/users/users.service';
 import { EmailsService } from 'src/emails/emails.service';
+import { VerifyEmailDto } from './dtos/verify-email.dto';
 
 @Injectable()
 export class AuthService {
@@ -33,7 +38,7 @@ export class AuthService {
     await this.sendVerificationEmail(createdUser.email, verificationCode);
 
     return {
-      message: `Verification email sent to ${createdUser.email}`,
+      message: `Verification code sent to ${createdUser.email}`,
     };
   }
 
@@ -63,12 +68,34 @@ export class AuthService {
     verificationCode: string,
   ) {
     const subject = 'Verify your email';
-    const text = `Your emai verification code is ${verificationCode}`;
-    const response = await this.emailsService.sendEmail(
-      recepientEmail,
-      subject,
-      text,
-    );
-    console.log({ response });
+    const text = `Your emai verification code is ${verificationCode}.`;
+    await this.emailsService.sendEmail(recepientEmail, subject, text);
+  }
+
+  async verifyEmail({ email, verificationCode }: VerifyEmailDto) {
+    const user = await this.usersService.findUser({
+      email,
+      verificationCode,
+      verificationCodeExpiresAt: { $gte: new Date() },
+      isVerified: false,
+    });
+
+    if (!user) {
+      throw new BadRequestException('Invalid or expired code');
+    }
+
+    user.isVerified = true;
+    user.verificationCode = undefined;
+    user.verificationCodeExpiresAt = undefined;
+    await user.save();
+
+    await this.sendWelcomeEmail(user.email, user.name);
+    return { message: 'Email verified successfully' };
+  }
+
+  async sendWelcomeEmail(recepientEmail: string, userName: string) {
+    const subject = 'Verify your email';
+    const text = `Welcome ${userName}. You have successfully verified your email.`;
+    await this.emailsService.sendEmail(recepientEmail, subject, text);
   }
 }

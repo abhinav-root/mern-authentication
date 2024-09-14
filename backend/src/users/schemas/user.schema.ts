@@ -21,16 +21,16 @@ export class User {
   isVerified: boolean;
 
   @Prop()
-  resetPasswordToken: string;
+  resetPasswordToken?: string;
 
   @Prop()
-  resetPasswordTokenExpiresAt: Date;
+  resetPasswordTokenExpiresAt?: Date;
 
   @Prop()
-  verificationCode: string;
+  verificationCode?: string;
 
   @Prop()
-  verifcationCodeExpiresAt: Date;
+  verificationCodeExpiresAt?: Date;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
