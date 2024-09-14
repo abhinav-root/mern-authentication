@@ -31,4 +31,14 @@ export class UsersService {
   async updateUser(filter: FilterQuery<User>, update: UpdateQuery<User>) {
     return this.userModel.updateOne(filter, update);
   }
+
+  async findUserByResetPasswordToken(
+    resetPasswordToken: string,
+  ): Promise<UserDocument | null> {
+    const user = await this.userModel.findOne({ resetPasswordToken });
+    if (!user) {
+      return null;
+    }
+    return user;
+  }
 }

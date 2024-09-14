@@ -15,6 +15,7 @@ import { EmailsService } from 'src/emails/emails.service';
 import { VerifyEmailDto } from './dtos/verify-email.dto';
 import { ConfigService } from '@nestjs/config';
 import { LoginDto } from './dtos/login.dto';
+import { ForgotPasswordDto } from './dtos/forgot-password.dto';
 
 @Injectable()
 export class AuthService {
@@ -41,7 +42,10 @@ export class AuthService {
       verificationCodeExpiresAt,
     });
 
-    await this.sendVerificationEmail(createdUser.email, verificationCode);
+    await this.emailsService.sendVerificationEmail(
+      createdUser.email,
+      verificationCode,
+    );
 
     return {
       message: `Verification code sent to ${createdUser.email}`,
@@ -69,15 +73,6 @@ export class AuthService {
     return argon2.verify(hashedPassword, password);
   }
 
-  async sendVerificationEmail(
-    recepientEmail: string,
-    verificationCode: string,
-  ) {
-    const subject = 'Verify your email';
-    const text = `Your emai verification code is ${verificationCode}.`;
-    await this.emailsService.sendEmail(recepientEmail, subject, text);
-  }
-
   async verifyEmail({ email, verificationCode }: VerifyEmailDto) {
     const user = await this.usersService.findUser({
       email,
@@ -95,14 +90,8 @@ export class AuthService {
     user.verificationCodeExpiresAt = undefined;
     await user.save();
 
-    await this.sendWelcomeEmail(user.email, user.name);
+    await this.emailsService.sendWelcomeEmail(user.email, user.name);
     return { message: 'Email verified successfully' };
-  }
-
-  async sendWelcomeEmail(recepientEmail: string, userName: string) {
-    const subject = 'Verify your email';
-    const text = `Welcome ${userName}. You have successfully verified your email.`;
-    await this.emailsService.sendEmail(recepientEmail, subject, text);
   }
 
   generateToken(userId: string) {
@@ -139,5 +128,23 @@ export class AuthService {
     await user.save();
 
     return { message: 'Logged in' };
+  }
+
+  async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
+    const user = await this.usersService.findUserByEmail(
+      forgotPasswordDto.email,
+    );
+
+    if (user) {
+      const token = crypto.randomBytes(64).toString('base64url');
+      user.resetPasswordToken = token;
+      user.resetPasswordTokenExpiresAt = new Date(Date.now() + 1000 * 60 * 60);
+      await user.save();
+      await this.emailsService.sendResetPasswordEmail(user.email, token);
+    }
+
+    return {
+      message: `A password reset link has been sent to ${forgotPasswordDto.email}`,
+    };
   }
 }

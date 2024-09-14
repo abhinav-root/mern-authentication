@@ -36,4 +36,35 @@ export class EmailsService {
     const response = await transporter.sendMail(mailOptions);
     return response;
   }
+
+  async sendVerificationEmail(
+    recepientEmail: string,
+    verificationCode: string,
+  ) {
+    const subject = 'Verify your email';
+    const text = `Your emai verification code is ${verificationCode}.`;
+    await this.sendEmail(recepientEmail, subject, text);
+  }
+
+  async sendWelcomeEmail(recepientEmail: string, userName: string) {
+    const subject = 'Verify your email';
+    const text = `Welcome ${userName}. You have successfully verified your email.`;
+    await this.sendEmail(recepientEmail, subject, text);
+  }
+
+  async sendResetPasswordEmail(
+    recepientEmail: string,
+    resetPasswordToken: string,
+  ) {
+    const CLIENT_URL = this.configService.get<string>('CLIENT_URL');
+    if (!CLIENT_URL) {
+      throw new Error('CLIENT_URL is not defined');
+    }
+
+    const resetPasswordLink = `${CLIENT_URL}/reset-password?token=${resetPasswordToken}`;
+    console.log({ resetPasswordLink });
+    const subject = 'Reset Password Link';
+    const text = `Click on below link to reset your password.\n${resetPasswordLink}`;
+    await this.sendEmail(recepientEmail, subject, text);
+  }
 }
